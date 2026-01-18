@@ -58,7 +58,10 @@
       "Bash(git remote remove:*)",
       "Bash(git pull:*)",
       "Bash(git merge:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(npx vsce package:*)",
+      "Bash(ls:*)"
     ]
   }
 }

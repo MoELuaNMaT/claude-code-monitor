@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-monitor",
+  "name": "claudetrack",
   "displayName": "Claude Code Monitor",
   "description": "Monitor Claude Code terminal with quota usage, plugins, skills, agents and real-time progress",
   "version": "0.1.0",
@@ -45,7 +45,7 @@
     "Extension Packs"
   ],
   "badging": {
-    "url": "https://img.shields.io/visual-studio-marketplace/v/claude-code-monitor.claude-code-monitor",
+    "url": "https://img.shields.io/visual-studio-marketplace/v/ClaudeCode-HUDmonitor.LuaNMaT",
     "description": "Version"
   },
   "activationEvents": [
@@ -55,12 +55,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "claudeMonitor.openMonitor",
+        "command": "claudetrack.openMonitor",
         "title": "Open Claude Monitor",
         "category": "Claude Monitor"
       },
       {
-        "command": "claudeMonitor.refreshQuota",
+        "command": "claudetrack.refreshQuota",
         "title": "Refresh Quota",
         "category": "Claude Monitor",
         "icon": "$(refresh)"
@@ -69,16 +69,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "claudeMonitorContainer",
+          "id": "claudetrackContainer",
           "title": "Claude Monitor",
           "icon": "resources/monitor.svg"
         }
       ]
     },
     "views": {
-      "claudeMonitorContainer": [
+      "claudetrackContainer": [
         {
-          "id": "claudeMonitorView",
+          "id": "claudetrackView",
           "name": "Monitor",
           "type": "webview"
         }
@@ -87,51 +87,51 @@
     "configuration": {
       "title": "Claude Monitor",
       "properties": {
-        "claudeMonitor.autoRefreshInterval": {
+        "claudetrack.autoRefreshInterval": {
           "type": "number",
           "default": 5,
           "description": "Auto refresh interval in minutes"
         },
-        "claudeMonitor.showPlanProgress": {
+        "claudetrack.showPlanProgress": {
           "type": "boolean",
           "default": true,
           "description": "Show Plan execution progress"
         },
-        "claudeMonitor.quotaWarningThreshold": {
+        "claudetrack.quotaWarningThreshold": {
           "type": "number",
           "default": 80,
           "description": "Quota warning threshold percentage"
         },
-        "claudeMonitor.autoRefreshIntervalSeconds": {
+        "claudetrack.autoRefreshIntervalSeconds": {
           "type": "number",
           "default": 30,
           "description": "Auto refresh interval in seconds"
         },
-        "claudeMonitor.colors.agent": {
+        "claudetrack.colors.agent": {
           "type": "string",
           "default": "#10b981",
           "description": "Highlight color for running agents",
           "format": "color-hex"
         },
-        "claudeMonitor.colors.skill": {
+        "claudetrack.colors.skill": {
           "type": "string",
           "default": "#8b5cf6",
           "description": "Highlight color for running skills",
           "format": "color-hex"
         },
-        "claudeMonitor.colors.plugin": {
+        "claudetrack.colors.plugin": {
           "type": "string",
           "default": "#007acc",
           "description": "Highlight color for running plugins",
           "format": "color-hex"
         },
-        "claudeMonitor.colors.mcp": {
+        "claudetrack.colors.mcp": {
           "type": "string",
           "default": "#f59e0b",
           "description": "Highlight color for running MCPs",
           "format": "color-hex"
         },
-        "claudeMonitor.runningStateMissThreshold": {
+        "claudetrack.runningStateMissThreshold": {
           "type": "number",
           "default": 5,
           "minimum": 1,
