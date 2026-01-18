@@ -8,12 +8,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/claude-code-monitor.git"
+    "url": "https://github.com/MoELuaNMaT/claude-code-monitor.git"
   },
   "bugs": {
-    "url": "https://github.com/username/claude-code-monitor/issues"
+    "url": "https://github.com/MoELuaNMaT/claude-code-monitor/issues"
   },
-  "homepage": "https://github.com/username/claude-code-monitor#readme",
+  "homepage": "https://github.com/MoELuaNMaT/claude-code-monitor#readme",
   "pricing": "Free",
   "keywords": [
     "claude",

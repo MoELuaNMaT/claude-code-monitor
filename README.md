@@ -2,10 +2,10 @@
 
 > A powerful VSCode extension for real-time monitoring of Claude Code terminal activity, API quota usage, and execution tracking.
 
-![Version](https://img.shields.io/visual-studio-marketplace/v/claude-code-monitor.claude-code-monitor)
-![Downloads](https://img.shields.io/visual-studio-marketplace/d/claude-code-monitor.claude-code-monitor)
-![Rating](https://img.shields.io/visual-studio-marketplace/r/claude-code-monitor.claude-code-monitor)
-![License](https://img.shields.io/github/license/username/claude-code-monitor)
+![Version](https://img.shields.io/visual-studio-marketplace/v/claude-code-monitor.LuaNMaT)
+![Downloads](https://img.shields.io/visual-studio-marketplace/d/claude-code-monitor.LuaNMaT)
+![Rating](https://img.shields.io/visual-studio-marketplace/r/claude-code-monitor.LuaNMaT)
+![License](https://img.shields.io/github/license/MoELuaNMaT/claude-code-monitor)
 
 ## Features
 
@@ -44,13 +44,13 @@
 ## Screenshots
 
 ### Main Monitor Panel
-![Main Panel](https://github.com/username/claude-code-monitor/raw/main/screenshots/main-panel.png)
+![Main Panel](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/main-panel.png)
 
 ### Quota Monitoring
-![Quota Section](https://github.com/username/claude-code-monitor/raw/main/screenshots/quota-section.png)
+![Quota Section](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/quota-section.png)
 
 ### Activity Feed
-![Activity Feed](https://github.com/username/claude-code-monitor/raw/main/screenshots/activity-feed.png)
+![Activity Feed](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/activity-feed.png)
 
 ## Installation
 
@@ -65,7 +65,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/claude-code-monitor.git
+git clone https://github.com/MoELuaNMaT/claude-code-monitor.git
 cd claude-code-monitor
 
 # Install dependencies
@@ -219,8 +219,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/username/claude-code-monitor/issues)
-- **Discussions**: Ask questions and share ideas in [GitHub Discussions](https://github.com/username/claude-code-monitor/discussions)
+- **Issues**: Report bugs and request features on [GitHub Issues](https://github.com/MoELuaNMaT/claude-code-monitor/issues)
+- **Discussions**: Ask questions and share ideas in [GitHub Discussions](https://github.com/MoELuaNMaT/claude-code-monitor/discussions)
 
 ## Credits
 
@@ -240,4 +240,4 @@ This extension:
 
 **Made with ❤️ by [Your Name]**
 
-[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=claude-code-monitor.claude-code-monitor) | [GitHub](https://github.com/username/claude-code-monitor)
+[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=claude-code-monitor.claude-code-monitor) | [GitHub](https://github.com/MoELuaNMaT/claude-code-monitor)

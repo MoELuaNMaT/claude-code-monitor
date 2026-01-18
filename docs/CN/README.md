@@ -44,13 +44,13 @@
 ## 截图
 
 ### 主监控面板
-![主面板](https://github.com/username/claude-code-monitor/raw/main/screenshots/main-panel.png)
+![主面板](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/main-panel.png)
 
 ### 配额监控
-![配额部分](https://github.com/username/claude-code-monitor/raw/main/screenshots/quota-section.png)
+![配额部分](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/quota-section.png)
 
 ### 活动流
-![活动流](https://github.com/username/claude-code-monitor/raw/main/screenshots/activity-feed.png)
+![活动流](https://github.com/MoELuaNMaT/claude-code-monitor/raw/main/screenshots/activity-feed.png)
 
 ## 安装
 
@@ -65,7 +65,7 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/username/claude-code-monitor.git
+git clone https://github.com/MoELuaNMaT/claude-code-monitor.git
 cd claude-code-monitor
 
 # 安装依赖
@@ -219,8 +219,8 @@ MIT 许可证 - 详见 [LICENSE](../../LICENSE) 文件。
 
 ## 支持
 
-- **问题**: 在 [GitHub Issues](https://github.com/username/claude-code-monitor/issues) 上报告错误和请求功能
-- **讨论**: 在 [GitHub Discussions](https://github.com/username/claude-code-monitor/discussions) 中提问和分享想法
+- **问题**: 在 [GitHub Issues](https://github.com/MoELuaNMaT/claude-code-monitor/issues) 上报告错误和请求功能
+- **讨论**: 在 [GitHub Discussions](https://github.com/MoELuaNMaT/claude-code-monitor/discussions) 中提问和分享想法
 
 ## 致谢
 
@@ -240,4 +240,4 @@ MIT 许可证 - 详见 [LICENSE](../../LICENSE) 文件。
 
 **由 [您的名字] 用 ❤️ 制作**
 
-[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=claude-code-monitor.claude-code-monitor) | [GitHub](https://github.com/username/claude-code-monitor)
+[VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=claude-code-monitor.claude-code-monitor) | [GitHub](https://github.com/MoELuaNMaT/claude-code-monitor)
