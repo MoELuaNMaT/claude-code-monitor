@@ -1,0 +1,19 @@
+{
+  "description": "Claude Code Monitor - 使用 Hook 系统监控 agent/skill/plugin/mcp 执行状态",
+  "hooks": {
+    "SubagentStart": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/send-status.mjs START {agentId} {agentName} {type} {model} {description}",
+        "timeout": 15
+      }
+    ],
+    "SubagentStop": [
+      {
+        "type": "command",
+        "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/send-status.mjs STOP {agentId}",
+        "timeout": 10
+      }
+    ]
+  }
+}

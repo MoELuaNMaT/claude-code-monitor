@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+out/
+
+# Claude Code ignore files
+.claudeNul
+
+# VSCode ignore files
+.vscode/
+
+# OS ignore files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test files
+TESTING.md

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="irisGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="128" rx="24" fill="url(#bgGradient)"/>
+
+  <!-- Outer eye circle (sclera) with glow -->
+  <circle cx="64" cy="64" r="45" stroke="#4ade80" stroke-width="2" fill="none" opacity="0.6"/>
+
+  <!-- Upper eyelid -->
+  <path d="M20 64 Q 64 35 108 64" stroke="#4ade80" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Lower eyelid -->
+  <path d="M20 64 Q 64 95 108 64" stroke="#4ade80" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Iris with gradient -->
+  <circle cx="64" cy="64" r="18" fill="url(#irisGradient)" opacity="0.9"/>
+
+  <!-- Pupil -->
+  <circle cx="64" cy="64" r="8" fill="#1a1a2e"/>
+
+  <!-- Claude symbol - three flowing arcs -->
+  <path d="M50 64 Q 54 58, 60 61" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M58 64 Q 62 56, 68 59" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M66 64 Q 72 58, 78 61" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+</svg>

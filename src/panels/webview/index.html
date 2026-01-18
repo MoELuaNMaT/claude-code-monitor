@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code Monitor</title>
+  <style>
+    :root {
+      --bg-primary: var(--vscode-sideBar-background);
+      --bg-secondary: var(--vscode-sideBarSectionHeader-background);
+      --text-primary: var(--vscode-sideBar-foreground);
+      --text-secondary: var(--vscode-descriptionForeground);
+      --border-color: var(--vscode-sideBar-border);
+      --progress-green: #4ec9b0;
+      --progress-yellow: #f59e0b;
+      --progress-red: #f14c4c;
+      --accent: var(--vscode-textLink-foreground);
+      /* Color configuration - can be overridden dynamically */
+      --color-agent: #10b981;
+      --color-skill: #8b5cf6;
+      --color-plugin: #007acc;
+      --color-mcp: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      margin: 0;
+    }
+
+    /* Scrollable content area for main sections */
+    .scrollable-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      padding-bottom: 0;
+      pointer-events: auto;
+    }
+
+    /* Fixed bottom area for image queue */
+    .fixed-bottom {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border-color);
+      padding: 12px;
+      background: var(--bg-primary);
+      position: relative;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    /* Remove bottom margin from sections in scrollable area */
+    .scrollable-content .section {
+      margin-bottom: 12px;
+    }
+
+    /* Remove margin from image queue section */
+    .fixed-bottom .section {
+      margin-bottom: 0;
+    }
+
+    .section {
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      background: var(--bg-secondary);
+      padding: 8px 12px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      font-size: 15px;
+    }
+
+    .section-header:hover {
+      background: color-mix(in srgb, var(--bg-secondary) 95%, var(--accent));
+    }
+
+    .section-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .section-title {
+      flex: 1;
+    }
+
+    .item-count {
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: normal;
+    }
+
+    .collapse-icon {
+      transition: transform 0.3s ease;
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .section.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+    }
+
+    .section-content {
+      padding: 8px;
+      transition: max-height 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+      max-height: 500px;
+      opacity: 1;
+      overflow: hidden;
+    }
+
+    .section.collapsed .section-content {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      opacity: 0;
+    }
+
+    /* When collapsed but has running items, show only running items */
+    .section.collapsed.has-running .section-content {
+      max-height: 60px;
+      padding: 4px 8px;
+      opacity: 1;
+    }
+
+    /* Hide non-running items in collapsed state */
+    .section.collapsed.has-running .plugin-item:not(.item-running),
+    .section.collapsed.has-running .skill-item:not(.item-running),
+    .section.collapsed.has-running .agent-item:not(.item-running),
+    .section.collapsed.has-running .mcp-item:not(.item-running) {
+      display: none;
+    }
+
+    .refresh-btn {
+      background: var(--accent);
+      color: var(--bg-primary);
+      border: none;
+      padding: 4px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .refresh-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Quota Section */
+    .quota-item {
+      margin-bottom: 16px;
+    }
+
+    .quota-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .quota-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .quota-provider {
+      font-weight: 600;
+    }
+
+    .quota-values {
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .progress-bar {
+      height: 24px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--bg-primary);
+      position: relative;
+      overflow: hidden;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Enhanced progress bar animations */
+    .progress-fill::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent 0%,
+        transparent 20%,
+        rgba(255, 255, 255, 0.25) 20%,
+        rgba(255, 255, 255, 0.25) 40%
+      );
+      animation: moveStripes 4s linear infinite;
+    }
+
+    .progress-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.5) 50%,
+        transparent 100%
+      );
+      animation: shimmer 3s ease-in-out infinite;
+    }
+
+    @keyframes moveStripes {
+      0% {
+        transform: translateX(0);
+      }
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        left: -50%;
+        opacity: 0.3;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        left: 150%;
+        opacity: 0.3;
+      }
+    }
+
+    .progress-fill.green {
+      background: var(--progress-green);
+    }
+
+    .progress-fill.yellow {
+      background: var(--progress-yellow);
+    }
+
+    .progress-fill.red {
+      background: var(--progress-red);
+    }
+
+    .quota-error {
+      color: var(--progress-red);
+      font-size: 12px;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+    }
+
+    .quota-updated {
+      color: var(--text-secondary);
+      font-size: 10px;
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .quota-reset {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 2px;
+      padding: 4px 8px;
+      background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+      border-radius: 4px;
+      border-left: 3px solid var(--accent);
+    }
+
+    /* Events Section */
+    .event-list {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .event-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .event-badge {
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .event-badge.tool {
+      background: var(--color-plugin);
+      color: white;
+    }
+
+    .event-badge.skill {
+      background: var(--color-skill);
+      color: white;
+    }
+
+    .event-badge.agent {
+      background: var(--color-agent);
+      color: white;
+    }
+
+    .event-badge.user {
+      background: #f59e0b;
+      color: white;
+    }
+
+    .event-content {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .event-time {
+      color: var(--text-secondary);
+      font-size: 11px;
+    }
+
+    /* Plugins Section */
+    .plugin-list {
+      max-height: 200px;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+
+    .plugin-item {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      font-size: 14px;
+    }
+
+    .plugin-name {
+      font-weight: 600;
+    }
+
+    .plugin-meta {
+      color: var(--text-secondary);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    /* ========== 增强版 Skills & Agents 样式 ========== */
+
+    /* Skills Section */
+    .skill-list {
+      max-height: 350px;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+
+    /* Skill Item - 基础卡片样式 */
+    .skill-item {
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg,
+        var(--bg-secondary) 0%,
+        color-mix(in srgb, var(--bg-secondary) 90%, var(--color-skill, #8b5cf6)) 100%
+      );
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      min-height: 44px;
+    }
+
+    /* Skill Item - 悬浮效果 */
+    .skill-item:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 4px 12px color-mix(in srgb, var(--color-skill, #8b5cf6) 20%, transparent),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+      border-color: color-mix(in srgb, var(--color-skill, #8b5cf6) 50%, transparent);
+    }
+
+    /* Skill Item - 运行状态 */
+    .skill-item.skill-running::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--color-skill, #8b5cf6), transparent);
+      animation: pulse-border 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-border {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .skill-name {
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .skill-item:hover .name-text {
+      color: var(--color-skill, #8b5cf6);
+    }
+
+    /* ========== Agents Section ========== */
+    .agent-list {
+      max-height: 350px;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+
+    /* Agent Item - 基础卡片样式 */
+    .agent-item {
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg,
+        var(--bg-secondary) 0%,
+        color-mix(in srgb, var(--bg-secondary) 90%, var(--color-agent, #10b981)) 100%
+      );
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid transparent;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      min-height: 44px;
+    }
+
+    /* Agent Item - 悬浮效果 */
+    .agent-item:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 4px 12px color-mix(in srgb, var(--color-agent, #10b981) 30%, transparent),
+        0 2px 4px rgba(0, 0, 0, 0.1);
+      border-color: color-mix(in srgb, var(--color-agent, #10b981) 50%, transparent);
+    }
+
+    /* Agent Item - 运行状态 */
+    .agent-item.agent-running::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--color-agent, #10b981), transparent);
+      animation: pulse-border 2s ease-in-out infinite;
+    }
+
+    .agent-name {
+      font-weight: 600;
+      font-size: 15px;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .agent-item:hover .name-text {
+      color: var(--color-agent, #10b981);
+    }
+
+    /* ========== File Icon 美化 ========== */
+    .file-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      margin-left: auto;
+      opacity: 0.5;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'%3E%3C/path%3E%3Cpolyline points='14 2 14 8 20 8'%3E%3C/polyline%3E%3C/svg%3E");
+      background-size: contain;
+      background-repeat: no-repeat;
+      flex-shrink: 0;
+      transition: all 0.25s ease;
+    }
+
+    .skill-item:hover .file-icon,
+    .agent-item:hover .file-icon {
+      opacity: 1;
+      transform: scale(1.1);
+      filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--color-skill, #8b5cf6) 50%, transparent));
+    }
+
+    .agent-item:hover .file-icon {
+      filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--color-agent, #10b981) 50%, transparent));
+    }
+
+    .file-icon.builtin-icon {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpath d='M12 16v-4'%3E%3C/path%3E%3Cpath d='M12 8h.01'%3E%3C/path%3E%3C/svg%3E");
+    }
+
+    /* ========== 自定义 Tooltip ========== */
+    .custom-tooltip {
+      position: fixed;
+      z-index: 10000;
+      background: linear-gradient(135deg,
+        var(--bg-secondary) 0%,
+        color-mix(in srgb, var(--bg-primary) 85%, var(--accent)) 100%
+      );
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-radius: 8px;
+      padding: 12px 14px;
+      max-width: 350px;
+      box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 color-mix(in srgb, var(--bg-primary) 50%, transparent);
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .custom-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .custom-tooltip::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 20px;
+      width: 12px;
+      height: 12px;
+      background: inherit;
+      border-left: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      transform: rotate(45deg);
+    }
+
+    .tooltip-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tooltip-path {
+      font-size: 11px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      padding: 4px 8px;
+      background: color-mix(in srgb, var(--bg-primary) 50%, transparent);
+      border-radius: 4px;
+      margin: 6px 0;
+      word-break: break-all;
+    }
+
+    .tooltip-description {
+      font-size: 11px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid color-mix(in srgb, var(--border-color) 30%, transparent);
+    }
+
+    .tooltip-click-hint {
+      font-size: 12px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    /* Builtin agent icon (documentation link) */
+    .file-icon.builtin-icon {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpath d='M12 16v-4'%3E%3C/path%3E%3Cpath d='M12 8h.01'%3E%3C/path%3E%3C/svg%3E");
+    }
+
+    /* File opening state */
+    .file-opening {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .file-opening::after {
+      content: 'Opening...';
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* MCP Section */
+    .mcp-list {
+      max-height: 350px;
+      overflow-y: auto;
+      scrollbar-gutter: stable;
+    }
+
+    .mcp-item {
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+
+    .mcp-name {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .mcp-desc {
+      color: var(--text-secondary);
+      font-size: 11px;
+      margin-top: 3px;
+      line-height: 1.4;
+    }
+
+    /* Context Usage Section */
+    .context-monitor {
+      padding: 12px;
+    }
+
+    .context-progress {
+      margin-bottom: 12px;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+      transition: width 0.3s ease, background 0.3s ease;
+      border-radius: 12px;
+    }
+
+    .progress-fill.warning {
+      background: linear-gradient(90deg, #FF9800, #FFC107);
+    }
+
+    .progress-fill.critical {
+      background: linear-gradient(90deg, #F44336, #FF5722);
+    }
+
+    .context-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .context-percent {
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--text-primary);
+    }
+
+    .context-tokens {
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .context-details {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .context-detail-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .detail-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .no-context-data {
+      text-align: center;
+      padding: 32px 16px;
+    }
+
+    .placeholder-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .placeholder-subtext {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-secondary);
+    }
+
+    .loading::after {
+      content: '...';
+      animation: ellipsis 1.5s infinite;
+    }
+
+    @keyframes ellipsis {
+      0% { content: '.'; }
+      33% { content: '..'; }
+      66% { content: '...'; }
+    }
+
+    /* Running State Styles */
+    .agent-list, .skill-list, .plugin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .item-running {
+      order: -1; /* Pin to top */
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .item-running.agent-running {
+      border-left: 3px solid var(--color-agent) !important;
+      color: var(--color-agent) !important;
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--color-agent) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-agent) 10%, transparent) 50%,
+        transparent 100%
+      ) !important;
+    }
+
+    .item-running.skill-running {
+      border-left: 3px solid var(--color-skill) !important;
+      color: var(--color-skill) !important;
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--color-skill) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-skill) 10%, transparent) 50%,
+        transparent 100%
+      ) !important;
+    }
+
+    .item-running.plugin-running {
+      border-left: 3px solid var(--color-plugin) !important;
+      color: var(--color-plugin) !important;
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--color-plugin) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-plugin) 10%, transparent) 50%,
+        transparent 100%
+      ) !important;
+    }
+
+    .item-running.mcp-running {
+      border-left: 3px solid var(--color-mcp) !important;
+      color: var(--color-mcp) !important;
+      background: linear-gradient(90deg,
+        color-mix(in srgb, var(--color-mcp) 20%, transparent) 0%,
+        color-mix(in srgb, var(--color-mcp) 10%, transparent) 50%,
+        transparent 100%
+      ) !important;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .running-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: currentColor;
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* Image Queue Styles */
+    .image-queue-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .image-drop-zone {
+      min-height: 80px;
+      border: 2px dashed var(--border-color);
+      border-radius: 6px;
+      padding: 12px;
+      position: relative;
+      z-index: 11;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .drop-zone-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    .drop-zone-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      opacity: 0.6;
+    }
+
+    .drop-zone-text {
+      font-size: 13px;
+    }
+
+    .drop-zone-placeholder.hidden {
+      display: none;
+    }
+
+    .image-preview-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .image-preview-item {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    .image-preview-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-preview-item .remove-btn {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      font-size: 12px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+    }
+
+    .image-preview-item .remove-btn:hover {
+      background: rgba(244, 76, 76, 0.9);
+    }
+
+    .image-queue-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .btn-select-image {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .btn-select-image:hover {
+      background: color-mix(in srgb, var(--bg-secondary) 95%, var(--accent));
+      border-color: var(--accent);
+    }
+
+    .image-queue-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 8px;
+      background: color-mix(in srgb, var(--bg-secondary) 50%, transparent);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Scrollable content area for main sections -->
+  <div class="scrollable-content">
+    <!-- Quota Section -->
+    <div class="section">
+      <div class="section-header">
+        <span>📊 API Quota</span>
+        <button class="refresh-btn" id="refreshQuota">Refresh</button>
+      </div>
+      <div class="section-content" id="quotaContent">
+        <div class="loading">Loading quota data</div>
+      </div>
+    </div>
+
+    <!-- Agents Section (moved before plugins) -->
+    <div class="section collapsed" id="agentsSection">
+      <div class="section-header" onclick="toggleSection('agents')">
+        <div class="section-header-left">
+          <span class="collapse-icon">▼</span>
+          <span class="section-title">🤖 Available Agents</span>
+          <span class="item-count" id="agentsCount">0</span>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="agent-list" id="agentList">
+          <div class="loading">Loading agents</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skills Section -->
+    <div class="section collapsed" id="skillsSection">
+      <div class="section-header" onclick="toggleSection('skills')">
+        <div class="section-header-left">
+          <span class="collapse-icon">▼</span>
+          <span class="section-title">🎯 Available Skills</span>
+          <span class="item-count" id="skillsCount">0</span>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="skill-list" id="skillList">
+          <div class="loading">Loading skills</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plugins Section (moved after skills) -->
+    <div class="section collapsed" id="pluginsSection">
+      <div class="section-header" onclick="toggleSection('plugins')">
+        <div class="section-header-left">
+          <span class="collapse-icon">▼</span>
+          <span class="section-title">🔌 Installed Plugins</span>
+          <span class="item-count" id="pluginsCount">0</span>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="plugin-list" id="pluginList">
+          <div class="loading">Loading plugins</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MCP Section -->
+    <div class="section collapsed" id="mcpSection">
+      <div class="section-header" onclick="toggleSection('mcp')">
+        <div class="section-header-left">
+          <span class="collapse-icon">▼</span>
+          <span class="section-title">🔧 MCP Tools</span>
+          <span class="item-count" id="mcpCount">0</span>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="mcp-list" id="mcpList">
+          <div class="loading">Loading MCP tools</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fixed bottom area for image queue -->
+  <div class="fixed-bottom">
+    <!-- Image Queue Section -->
+    <div class="section" id="imageQueueSection">
+      <div class="section-header">
+        <div class="section-header-left">
+          <span class="section-title">📎 待发送图片</span>
+          <span class="item-count" id="imageQueueCount">0</span>
+        </div>
+      </div>
+      <div class="section-content">
+        <div class="image-queue-container">
+          <div class="image-drop-zone" id="imageDropZone">
+            <div class="drop-zone-placeholder" id="dropZonePlaceholder">
+              <span class="drop-zone-icon">📋</span>
+              <span class="drop-zone-text">Ctrl+V 粘贴图片</span>
+            </div>
+            <div class="image-preview-list" id="imagePreviewList"></div>
+          </div>
+          <div class="image-queue-actions">
+            <button class="btn-select-image" id="selectImageButton">📷 选择图片</button>
+            <input type="file" id="imageFileInput" accept="image/*" multiple style="display: none;">
+          </div>
+          <div class="image-queue-hint">
+            💡 <strong>使用方法：</strong>粘贴图片 → 点击终端 → 自动发送图片路径<br>
+            <small style="color:var(--text-secondary)">提示：图片路径会附加到终端输入，按 <kbd style="background:var(--bg-secondary); padding:2px 6px; border-radius:3px; border:1px solid var(--border-color);">Enter</kbd> 执行</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const vscode = acquireVsCodeApi();
+
+    // State
+    let quotaData = [];
+    let events = [];
+    let plugins = [];
+    let skills = [];
+    let agents = [];
+    let mcpTools = [];
+    let runningItems = []; // Running state tracking
+    let imageQueue = []; // Image queue for sending
+    let colorConfig = {
+      defaultColors: {
+        agent: '#10b981',
+        skill: '#8b5cf6',
+        plugin: '#007acc'
+      },
+      agentColors: {}  // {agentName: color}
+    };
+
+    // ========== Tooltip Management ==========
+    let tooltipElement = null;
+
+    function initializeTooltip() {
+      tooltipElement = document.createElement('div');
+      tooltipElement.className = 'custom-tooltip';
+      document.body.appendChild(tooltipElement);
+    }
+
+    function attachTooltipListeners() {
+      const items = document.querySelectorAll('.skill-item, .agent-item');
+      items.forEach(item => {
+        item.addEventListener('mouseenter', (e) => {
+          const name = e.currentTarget.dataset.name;
+          const path = e.currentTarget.dataset.path;
+          const desc = e.currentTarget.dataset.description;
+          if (!name && !path) return;
+          showTooltip(e.currentTarget, name, path, desc);
+        });
+        item.addEventListener('mouseleave', hideTooltip);
+      });
+    }
+
+    function showTooltip(targetElement, name, path, desc) {
+      if (!tooltipElement) return;
+
+      let html = '';
+      if (name) html += `<div class="tooltip-title">${escapeHtml(name)}</div>`;
+      if (path) html += `<div class="tooltip-path">${escapeHtml(path)}</div>`;
+      if (desc) html += `<div class="tooltip-description">${escapeHtml(desc)}</div>`;
+
+      // Add click hint
+      const hasFile = path || (targetElement.dataset.path);
+      if (hasFile) {
+        html += `<div class="tooltip-click-hint">📎 点击可以打开</div>`;
+      } else {
+        html += `<div class="tooltip-click-hint">ℹ️ 无关联文件</div>`;
+      }
+
+      tooltipElement.innerHTML = html;
+      tooltipElement.classList.add('visible');
+
+      // Position tooltip above the target element
+      const rect = targetElement.getBoundingClientRect();
+      const tooltipRect = tooltipElement.getBoundingClientRect();
+
+      let top = rect.top - tooltipRect.height - 8;
+      let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+      // Prevent tooltip from going off screen
+      if (top < 8) top = rect.bottom + 8;
+      if (left < 8) left = 8;
+      if (left + tooltipRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - tooltipRect.width - 8;
+      }
+
+      tooltipElement.style.top = `${top}px`;
+      tooltipElement.style.left = `${left}px`;
+    }
+
+    function hideTooltip() {
+      if (tooltipElement) {
+        tooltipElement.classList.remove('visible');
+      }
+    }
+
+    // Initialize
+    function init() {
+      // Initialize tooltip system
+      initializeTooltip();
+
+      // Request initial data
+      vscode.postMessage({ type: 'getQuota' });
+      vscode.postMessage({ type: 'getPlugins' });
+      vscode.postMessage({ type: 'getSkills' });
+      vscode.postMessage({ type: 'getAgents' });
+      vscode.postMessage({ type: 'getMcpTools' });
+      vscode.postMessage({ type: 'getColors' });
+
+      // Setup event listeners
+      document.getElementById('refreshQuota').addEventListener('click', () => {
+        vscode.postMessage({ type: 'refreshQuota' });
+      });
+
+      // Image queue event listeners
+      setupImageQueueListeners();
+
+      // Listen for messages from extension
+      window.addEventListener('message', handleMessage);
+    }
+
+    // Handle messages from extension
+    function handleMessage(event) {
+      const message = event.data;
+
+      switch (message.type) {
+        case 'quotaUpdate':
+          quotaData = message.data;
+          renderQuota();
+          break;
+        case 'runningStateUpdate':
+          runningItems = message.data;
+          renderAgents();
+          renderSkills();
+          renderPlugins();
+          renderMcpTools();
+          // Auto-expand sections when running state changes
+          checkRunningStateAndExpand();
+          break;
+        case 'pluginsUpdate':
+          plugins = message.data;
+          renderPlugins();
+          break;
+        case 'skillsUpdate':
+          skills = message.data;
+          renderSkills();
+          break;
+        case 'agentsUpdate':
+          agents = message.data;
+          renderAgents();
+          break;
+        case 'mcpToolsUpdate':
+          mcpTools = message.data;
+          renderMcpTools();
+          break;
+        case 'colorsUpdate':
+          updateColors(message.data);
+          break;
+        case 'imageQueueUpdate':
+          imageQueue = message.data;
+          renderImageQueue();
+          break;
+        case 'terminalExecuteKey':
+          updateTerminalExecuteKey(message.data);
+          break;
+      }
+    }
+
+    // Update terminal execute keybinding display
+    function updateTerminalExecuteKey(keybinding) {
+      const hintElement = document.querySelector('.image-queue-hint small');
+      if (hintElement) {
+        hintElement.innerHTML = `提示：图片路径会附加到终端输入，按 <kbd style="background:var(--bg-secondary); padding:2px 6px; border-radius:3px; border:1px solid var(--border-color);">${keybinding}</kbd> 执行`;
+      }
+      console.log('[updateTerminalExecuteKey] Updated terminal execute key:', keybinding);
+    }
+
+    // Update color configuration
+    function updateColors(config) {
+      colorConfig = config;
+
+      // Update default color variables
+      document.documentElement.style.setProperty('--color-agent', config.defaultColors.agent);
+      document.documentElement.style.setProperty('--color-skill', config.defaultColors.skill);
+      document.documentElement.style.setProperty('--color-plugin', config.defaultColors.plugin);
+
+      // Re-render lists to apply agent-specific colors
+      renderAgents();
+      renderSkills();
+      renderPlugins();
+
+      // Check running state and auto-expand sections
+      checkRunningStateAndExpand();
+    }
+
+    // Check running state and update sections
+    function checkRunningStateAndExpand() {
+      // Check if there are any running agents, skills, plugins, or MCPs
+      const hasRunningAgents = runningItems.some(item => item.type === 'agent');
+      const hasRunningSkills = runningItems.some(item => item.type === 'skill');
+      const hasRunningPlugins = runningItems.some(item => item.type === 'plugin');
+      const hasRunningMcps = runningItems.some(item => item.type === 'mcp');
+
+      // Add/remove 'has-running' class to sections (shows only running items when collapsed)
+      const agentsSection = document.getElementById('agentsSection');
+      const skillsSection = document.getElementById('skillsSection');
+      const pluginsSection = document.getElementById('pluginsSection');
+      const mcpSection = document.getElementById('mcpSection');
+
+      if (agentsSection) {
+        if (hasRunningAgents) {
+          agentsSection.classList.add('has-running');
+        } else {
+          agentsSection.classList.remove('has-running');
+        }
+      }
+
+      if (skillsSection) {
+        if (hasRunningSkills) {
+          skillsSection.classList.add('has-running');
+        } else {
+          skillsSection.classList.remove('has-running');
+        }
+      }
+
+      if (pluginsSection) {
+        if (hasRunningPlugins) {
+          pluginsSection.classList.add('has-running');
+        } else {
+          pluginsSection.classList.remove('has-running');
+        }
+      }
+
+      if (mcpSection) {
+        if (hasRunningMcps) {
+          mcpSection.classList.add('has-running');
+        } else {
+          mcpSection.classList.remove('has-running');
+        }
+      }
+    }
+
+    // Get color for an agent (prioritize own color, otherwise use default)
+    function getAgentColor(agentName) {
+      return colorConfig.agentColors[agentName] || colorConfig.defaultColors.agent;
+    }
+
+    // Toggle section collapse/expand
+    function toggleSection(sectionId) {
+      const section = document.getElementById(sectionId + 'Section');
+      if (section) {
+        section.classList.toggle('collapsed');
+      }
+    }
+
+    // Expand section (for auto-expand on running state)
+    function expandSection(sectionId) {
+      const section = document.getElementById(sectionId + 'Section');
+      if (section) {
+        section.classList.remove('collapsed');
+      }
+    }
+
+    // Collapse section
+    function collapseSection(sectionId) {
+      const section = document.getElementById(sectionId + 'Section');
+      if (section) {
+        section.classList.add('collapsed');
+      }
+    }
+
+    // Render quota section
+    function renderQuota() {
+      const container = document.getElementById('quotaContent');
+
+      if (quotaData.length === 0) {
+        container.innerHTML = '<div class="empty-state">No quota data available</div>';
+        return;
+      }
+
+      container.innerHTML = quotaData.map(quota => {
+        if (quota.error) {
+          return `<div class="quota-error">${quota.provider}: ${quota.error}</div>`;
+        }
+
+        const progressClass = quota.percentage >= 80 ? 'red' :
+                              quota.percentage >= 50 ? 'yellow' : 'green';
+
+        const used = formatNumber(quota.used);
+        const limit = formatNumber(quota.limit);
+
+        // Format reset date
+        const resetTime = formatResetDate(quota.resetDate);
+
+        return `
+          <div class="quota-item">
+            <div class="quota-header">
+              <span class="quota-provider">${quota.provider}</span>
+              <span class="quota-values">${used} / ${limit} ${quota.currency}</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill ${progressClass}" style="width: ${quota.percentage}%">
+                ${quota.percentage}%
+              </div>
+            </div>
+            ${resetTime ? `<div class="quota-reset">${resetTime}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render plugins section
+    function renderPlugins() {
+      const container = document.getElementById('pluginList');
+      const countElement = document.getElementById('pluginsCount');
+
+      // Update count
+      if (countElement) {
+        countElement.textContent = plugins.length.toString();
+      }
+
+      if (plugins.length === 0) {
+        container.innerHTML = '<div class="empty-state">No plugins installed</div>';
+        return;
+      }
+
+      container.innerHTML = plugins.map(plugin => {
+        const isRunning = runningItems.some(item => item.id === plugin.id);
+        const runningClass = isRunning ? 'item-running plugin-running' : '';
+
+        return `
+          <div class="plugin-item ${runningClass}" data-id="${plugin.id}">
+            <div class="plugin-name">
+              ${isRunning ? '<span class="running-indicator"></span>' : ''}
+              ${escapeHtml(plugin.name)}
+            </div>
+            <div class="plugin-meta">${plugin.version} • ${plugin.scope}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render skills section
+    function renderSkills() {
+      const container = document.getElementById('skillList');
+      const countElement = document.getElementById('skillsCount');
+
+      // Update count
+      if (countElement) {
+        countElement.textContent = skills.length.toString();
+      }
+
+      if (skills.length === 0) {
+        container.innerHTML = '<div class="empty-state">No skills available</div>';
+        return;
+      }
+
+      container.innerHTML = skills.map(skill => {
+        const isRunning = runningItems.some(item => item.id === skill.id);
+        const runningClass = isRunning ? 'item-running skill-running' : '';
+        const hasFile = skill.mdPath;
+
+        return `
+          <div class="skill-item ${runningClass}"
+               data-id="${skill.id}"
+               data-name="${escapeHtml(skill.name)}"
+               data-path="${hasFile ? escapeHtml(skill.mdPath) : ''}"
+               data-description="${skill.description ? escapeHtml(skill.description) : ''}"
+               onclick="openSkillFile('${skill.id}')">
+            <div class="skill-name">
+              ${isRunning ? '<span class="running-indicator"></span>' : ''}
+              <span class="name-text">${escapeHtml(skill.name)}</span>
+              ${hasFile ? '<span class="file-icon" title="Click to open SKILL.md"></span>' : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Reattach tooltip listeners after render
+      attachTooltipListeners();
+    }
+
+    // Open skill MD file
+    function openSkillFile(skillId) {
+      const skill = skills.find(s => s.id === skillId);
+      if (!skill) {
+        console.error('[openSkillFile] Skill not found:', skillId);
+        return;
+      }
+
+      // Show loading state
+      const itemElement = document.querySelector(`[data-id="${skillId}"]`);
+      if (itemElement) {
+        itemElement.classList.add('file-opening');
+      }
+
+      // Send open file request to extension
+      vscode.postMessage({
+        type: 'openSkillFile',
+        data: {
+          id: skill.id,
+          mdPath: skill.mdPath
+        }
+      });
+
+      // Remove loading state after a delay
+      setTimeout(() => {
+        if (itemElement) {
+          itemElement.classList.remove('file-opening');
+        }
+      }, 1000);
+    }
+
+    // Open agent MD file or documentation
+    function openAgentFile(agentId) {
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) {
+        console.error('[openAgentFile] Agent not found:', agentId);
+        return;
+      }
+
+      // Show loading state
+      const itemElement = document.querySelector(`[data-id="${agentId}"]`);
+      if (itemElement) {
+        itemElement.classList.add('file-opening');
+      }
+
+      // Send open file request to extension
+      vscode.postMessage({
+        type: 'openAgentFile',
+        data: {
+          id: agent.id,
+          mdPath: agent.mdPath,
+          docUrl: agent.docUrl,
+          source: agent.source
+        }
+      });
+
+      // Remove loading state after a delay
+      setTimeout(() => {
+        if (itemElement) {
+          itemElement.classList.remove('file-opening');
+        }
+      }, 1000);
+    }
+
+    // Truncate text helper
+    function truncateText(text, maxLength) {
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    }
+
+    // Render agents section
+    function renderAgents() {
+      const container = document.getElementById('agentList');
+      const countElement = document.getElementById('agentsCount');
+
+      // Update count
+      if (countElement) {
+        countElement.textContent = agents.length.toString();
+      }
+
+      if (agents.length === 0) {
+        container.innerHTML = '<div class="empty-state">No agents available</div>';
+        return;
+      }
+
+      container.innerHTML = agents.map(agent => {
+        const isRunning = runningItems.some(item => item.id === agent.id);
+        const runningClass = isRunning ? 'item-running agent-running' : '';
+        const agentColor = isRunning ? getAgentColor(agent.name) : null;
+        const colorStyle = agentColor ? `style="--color-agent: ${agentColor}"` : '';
+        const hasFile = agent.mdPath || agent.docUrl;
+        const isBuiltin = agent.source === 'builtin';
+
+        return `
+          <div class="agent-item ${runningClass}"
+               data-id="${agent.id}"
+               data-name="${escapeHtml(agent.name)}"
+               data-path="${hasFile ? (isBuiltin ? escapeHtml(agent.docUrl || '') : escapeHtml(agent.mdPath || '')) : ''}"
+               data-description="${agent.description ? escapeHtml(agent.description) : ''}"
+               ${colorStyle}
+               onclick="openAgentFile('${agent.id}')">
+            <div class="agent-name">
+              ${isRunning ? '<span class="running-indicator"></span>' : ''}
+              <span class="name-text">${escapeHtml(agent.name)}</span>
+              ${hasFile ? `<span class="file-icon ${isBuiltin ? 'builtin-icon' : ''}" title="${isBuiltin ? 'Open official documentation' : 'Click to open Agent definition'}"></span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Reattach tooltip listeners after render
+      attachTooltipListeners();
+    }
+
+    // Context usage state
+    function formatNumber(num) {
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      }
+      return num.toString();
+    }
+
+    // Render MCP tools section
+    function renderMcpTools() {
+      const container = document.getElementById('mcpList');
+      const countElement = document.getElementById('mcpCount');
+
+      // Debug logging - check actual ID formats
+      console.log('[renderMcpTools] Raw mcpTools data:', mcpTools);
+      console.log('[renderMcpTools] mcpTools.length:', mcpTools.length);
+
+      // Filter: extract unique server names from all items
+      // Items with format mcp__server__tool are tools, extract server name
+      // Items with format mcp__server are servers
+      const serverMap = new Map();
+      for (const mcp of mcpTools) {
+        // Extract server name from ID
+        // Format: mcp__serverName or mcp__serverName__toolName
+        const parts = mcp.id.split('__');
+        const serverName = parts[1]; // Get second part (server name)
+
+        if (serverName && !serverMap.has(serverName)) {
+          serverMap.set(serverName, {
+            id: `mcp__${serverName}`,
+            name: serverName,
+            server: serverName,
+            description: `MCP Server`,
+            toolCount: 0
+          });
+        }
+
+        // Count tools per server
+        if (serverName && parts.length > 2) {
+          const server = serverMap.get(serverName);
+          if (server) {
+            server.toolCount++;
+          }
+        }
+      }
+
+      const mcpServers = Array.from(serverMap.values());
+
+      console.log('[renderMcpTools] All IDs:', mcpTools.map(m => m.id));
+      console.log('[renderMcpTools] Server names extracted:', Array.from(serverMap.keys()));
+      console.log('[renderMcpTools] Filtered mcpServers:', mcpServers);
+      console.log('[renderMcpTools] mcpServers.length:', mcpServers.length);
+
+      // Update count (show server count, not tool count)
+      if (countElement) {
+        countElement.textContent = mcpServers.length.toString();
+      }
+
+      if (mcpServers.length === 0) {
+        container.innerHTML = '<div class="empty-state">No MCP tools available</div>';
+        return;
+      }
+
+      container.innerHTML = mcpServers.map(mcp => {
+        const isRunning = runningItems.some(item => item.id === mcp.id);
+        const runningClass = isRunning ? 'item-running mcp-running' : '';
+
+        return `
+          <div class="mcp-item ${runningClass}" data-id="${mcp.id}">
+            <div class="mcp-name">
+              ${isRunning ? '<span class="running-indicator"></span>' : ''}
+              ${escapeHtml(mcp.name)}
+            </div>
+            <div class="mcp-desc">${escapeHtml(mcp.description)} (${mcp.toolCount} tools)</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Helper functions
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toString();
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = now - date;
+
+      if (diff < 60000) return 'just now';
+      if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+      if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+      return date.toLocaleDateString();
+    }
+
+    function formatResetDate(resetDate) {
+      if (!resetDate) return '';
+
+      const date = new Date(resetDate);
+      const now = new Date();
+      const diff = date - now;
+
+      // 格式化时间为 HH:MM
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+
+      // 判断是否是今天、明天或更远
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const resetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+      if (resetDay.getTime() === today.getTime()) {
+        // 今天
+        return `Today ${timeStr}`;
+      } else if (resetDay.getTime() === tomorrow.getTime()) {
+        // 明天
+        return `Tomorrow ${timeStr}`;
+      } else {
+        // 其他日期
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${month}-${day} ${timeStr}`;
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Image Queue Functions
+    function setupImageQueueListeners() {
+      const dropZone = document.getElementById('imageDropZone');
+      const selectButton = document.getElementById('selectImageButton');
+      const fileInput = document.getElementById('imageFileInput');
+
+      console.log('[ImageQueue] Setting up listeners');
+
+      // Paste event on document (works anywhere in the page)
+      document.addEventListener('paste', handlePaste);
+
+      // File selection
+      selectButton.addEventListener('click', () => {
+        console.log('[ImageQueue] selectButton clicked');
+        fileInput.click();
+      });
+      fileInput.addEventListener('change', (e) => {
+        console.log('[ImageQueue] fileInput changed, files:', e.target.files?.length);
+        handleFileSelect(e);
+      });
+    }
+
+    function handlePaste(e) {
+      const items = e.clipboardData.items;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          processImageFile(file);
+          break;
+        }
+      }
+    }
+
+    function handleFileSelect(e) {
+      const files = e.target.files;
+      for (const file of files) {
+        if (file.type.startsWith('image/')) {
+          processImageFile(file);
+        }
+      }
+      // Reset file input to allow selecting the same file again
+      e.target.value = '';
+    }
+
+    async function processImageFile(file) {
+      try {
+        // Convert to Base64
+        const base64 = await fileToBase64(file);
+
+        // Add to queue via extension
+        vscode.postMessage({
+          type: 'addImageToQueue',
+          data: {
+            name: file.name,
+            type: file.type,
+            data: base64
+          }
+        });
+      } catch (error) {
+        console.error('Error processing image:', error);
+        vscode.postMessage({
+          type: 'showError',
+          data: `Failed to process image: ${error.message}`
+        });
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          // Remove data:image/xxx;base64, prefix
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderImageQueue() {
+      const previewList = document.getElementById('imagePreviewList');
+      const placeholder = document.getElementById('dropZonePlaceholder');
+      const countElement = document.getElementById('imageQueueCount');
+
+      // Update count
+      countElement.textContent = imageQueue.length.toString();
+
+      // Clear current preview list
+      previewList.innerHTML = '';
+
+      if (imageQueue.length === 0) {
+        placeholder.classList.remove('hidden');
+        return;
+      }
+
+      // Hide placeholder
+      placeholder.classList.add('hidden');
+
+      // Render each image
+      for (const image of imageQueue) {
+        const item = document.createElement('div');
+        item.className = 'image-preview-item';
+        item.dataset.id = image.id;
+
+        const img = document.createElement('img');
+        img.src = `data:${image.type};base64,${image.data}`;
+        img.alt = image.name;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '×';
+        removeBtn.title = 'Remove image';
+        removeBtn.onclick = () => {
+          vscode.postMessage({
+            type: 'removeImageFromQueue',
+            data: image.id
+          });
+        };
+
+        item.appendChild(img);
+        item.appendChild(removeBtn);
+        previewList.appendChild(item);
+      }
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

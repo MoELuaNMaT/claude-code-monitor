@@ -1,0 +1,163 @@
+{
+  "name": "claude-code-monitor",
+  "displayName": "Claude Code Monitor",
+  "description": "Monitor Claude Code terminal with quota usage, plugins, skills, agents and real-time progress",
+  "version": "0.1.0",
+  "publisher": "LuaNMaT",
+  "icon": "resources/cathamburger.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/claude-code-monitor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/username/claude-code-monitor/issues"
+  },
+  "homepage": "https://github.com/username/claude-code-monitor#readme",
+  "pricing": "Free",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
+    "chat",
+    "monitor",
+    "quota",
+    "token",
+    "api",
+    "terminal",
+    "llm",
+    "ai-assistant"
+  ],
+  "markdown": "github-flavored",
+  "enabledApiProposals": [
+    "terminalDataWriteEvent"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "galleryBanner": {
+    "color": "#1a1a2e",
+    "theme": "dark"
+  },
+  "categories": [
+    "Other",
+    "Extension Packs"
+  ],
+  "badging": {
+    "url": "https://img.shields.io/visual-studio-marketplace/v/claude-code-monitor.claude-code-monitor",
+    "description": "Version"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "claudeMonitor.openMonitor",
+        "title": "Open Claude Monitor",
+        "category": "Claude Monitor"
+      },
+      {
+        "command": "claudeMonitor.refreshQuota",
+        "title": "Refresh Quota",
+        "category": "Claude Monitor",
+        "icon": "$(refresh)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claudeMonitorContainer",
+          "title": "Claude Monitor",
+          "icon": "resources/monitor.svg"
+        }
+      ]
+    },
+    "views": {
+      "claudeMonitorContainer": [
+        {
+          "id": "claudeMonitorView",
+          "name": "Monitor",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Claude Monitor",
+      "properties": {
+        "claudeMonitor.autoRefreshInterval": {
+          "type": "number",
+          "default": 5,
+          "description": "Auto refresh interval in minutes"
+        },
+        "claudeMonitor.showPlanProgress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Plan execution progress"
+        },
+        "claudeMonitor.quotaWarningThreshold": {
+          "type": "number",
+          "default": 80,
+          "description": "Quota warning threshold percentage"
+        },
+        "claudeMonitor.autoRefreshIntervalSeconds": {
+          "type": "number",
+          "default": 30,
+          "description": "Auto refresh interval in seconds"
+        },
+        "claudeMonitor.colors.agent": {
+          "type": "string",
+          "default": "#10b981",
+          "description": "Highlight color for running agents",
+          "format": "color-hex"
+        },
+        "claudeMonitor.colors.skill": {
+          "type": "string",
+          "default": "#8b5cf6",
+          "description": "Highlight color for running skills",
+          "format": "color-hex"
+        },
+        "claudeMonitor.colors.plugin": {
+          "type": "string",
+          "default": "#007acc",
+          "description": "Highlight color for running plugins",
+          "format": "color-hex"
+        },
+        "claudeMonitor.colors.mcp": {
+          "type": "string",
+          "default": "#f59e0b",
+          "description": "Highlight color for running MCPs",
+          "format": "color-hex"
+        },
+        "claudeMonitor.runningStateMissThreshold": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Number of consecutive messages without detecting an event before stopping highlight"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "axios": "^1.6.5"
+  }
+}
